@@ -118,7 +118,7 @@ def process_line(le, usage_map, ver, cmd_map):
         cmd_map["query"] = cmd_map.get("query", 0) + 1
 
     elif 'WRITE' == le.component:
-        if (le.operation in ['update']):
+        if le.operation in ['update']:
             #print("Processing update...")
             retval = process_update(le, usage_map, ver)
             cmd_map["update"] = cmd_map.get("update", 0) + 1
