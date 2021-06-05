@@ -30,7 +30,7 @@ def load_keywords(fname):
     with open(fname) as csv_file:
         reader = csv.DictReader(csv_file, delimiter=',')
         for k in reader.fieldnames[1:]:
-            if ('Command' == k):
+            if 'Command' == k:
                 continue
             keywords[k] = {}
         for row in reader:
