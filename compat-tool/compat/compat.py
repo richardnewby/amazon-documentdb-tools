@@ -12,11 +12,11 @@ versions = ['3.6', '4.0']
 
 def all_keys(x):
     k = []
-    if (dict == type(x)):
+    if dict == type(x):
         for kk in x.keys():
             k.append(kk)
             k = k + all_keys(x[kk])
-    elif (list == type(x)):
+    elif list == type(x):
         for vv in x:
             k = k + all_keys(vv)
     return k
@@ -41,7 +41,7 @@ def load_keywords(fname):
 def check_keys(query, usage_map, ver):
     unsupported = False
     for k in dollar_keys(query):
-        if ('No' == keywords[ver][k]):
+        if 'No' == keywords[ver][k]:
             usage_map[k] = usage_map.get(k, 0) + 1
             unsupported = True
     return unsupported
@@ -66,7 +66,7 @@ def process_query(le, usage_map, ver):
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{0}.find({1}'.format(le.namespace, query["filter"])
-    if ("projection" in query.keys()):
+    if "projection" in query.keys():
         actual_query = '{0}, {1}'.format(actual_query, query["projection"])
     actual_query = '{0})'.format(actual_query)
     retval = {"unsupported": (0 < len(p_usage_map.keys())), "unsupported_keys": list(p_usage_map.keys()), "logevent": le, "processed": 1, "actual_query": actual_query}
@@ -80,7 +80,7 @@ def process_find(le, usage_map, ver):
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{0}.find({1}'.format(le.namespace, query["filter"])
-    if ("projection" in query.keys()):
+    if "projection" in query.keys():
         actual_query = '{0}, {1}'.format(actual_query, query["projection"])
     actual_query = '{0})'.format(actual_query)
     retval = {"unsupported": (0 < len(p_usage_map.keys())), "unsupported_keys": list(p_usage_map.keys()), "logevent": le, "processed": 1, "actual_query": actual_query}
@@ -101,7 +101,7 @@ def process_line(le, usage_map, ver, cmd_map):
     retval = {"unsupported": False, "processed": 0}
 
     #print(f'Command: {le.command}, Component: {le.component}, Actual Query: {le.actual_query}')
-    if ('COMMAND' == le. component):
+    if 'COMMAND' == le. component:
         if le.command in ['find']:
             #print("Processing COMMAND find...")
             retval = process_find(le, usage_map, ver)
@@ -112,12 +112,12 @@ def process_line(le, usage_map, ver, cmd_map):
             retval = process_aggregate(le, usage_map, ver)
             cmd_map["aggregate"] = cmd_map.get("aggregate", 0) + 1
 
-    elif ('QUERY' == le.component):
+    elif 'QUERY' == le.component:
         #print("Processing query...")
         retval = process_query(le, usage_map, ver)
         cmd_map["query"] = cmd_map.get("query", 0) + 1
 
-    elif ('WRITE' == le.component):
+    elif 'WRITE' == le.component:
         if (le.operation in ['update']):
             #print("Processing update...")
             retval = process_update(le, usage_map, ver)
@@ -139,11 +139,11 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
         for line in log_file:
  #          print('\n{}'.format(line))
             le = logevent.LogEvent(line)
-            if(le.datetime is None):
+            if le.datetime is None:
               continue
             pl = process_line(le, usage_map, ver, cmd_map)
             line_ct += pl["processed"]
-            if (pl["unsupported"]):
+            if pl["unsupported"]:
                 unsupported_file.write(pl["logevent"].line_str)
                 unsupported_file.write("\n")
                 unsupported_query_file.write('{0}  // {1}\n'.format(pl["actual_query"], pl["unsupported_keys"]))
@@ -151,7 +151,7 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
     unsupported_file.close()
 
     print('Results:')
-    if (unsupported_ct > 0):
+    if unsupported_ct > 0:
         print('\t {0} out of {1} queries unsupported'.format(unsupported_ct, line_ct))
         print('Unsupported operators (and number of queries used):')
         for k,v in sorted(usage_map.items(), key=lambda x: (-x[1],x[0])):
@@ -173,17 +173,17 @@ def print_usage():
 
 
 def main(args):
-    if (3 != len(args)):
+    if 3 != len(args):
         print('Incorrect number of arguments')
         print_usage()
         sys.exit()
     ver = args[0]
-    if (ver not in versions):
+    if ver not in versions:
         print('Version {0} not supported'.format(ver))
         print_usage()
         sys.exit()
     infname = args[1]
-    if (not os.path.isfile(infname)):
+    if not os.path.isfile(infname):
         print('Input file not found ({0})'.format(infname))
         print_usage()
         sys.exit()
