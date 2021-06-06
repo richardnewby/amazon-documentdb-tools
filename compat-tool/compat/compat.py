@@ -109,30 +109,30 @@ def process_update(le, usage_map, ver):
     retval = {"unsupported": (0 < len(p_usage_map.keys())), "unsupported_keys": list(p_usage_map.keys()), "logevent": le, "processed": 1, "actual_query": actual_query}
     return retval
 
-def process_line(le, usage_map, ver, cmd_map):
+def process_line(log_event, usage_map, ver, cmd_map):
     retval = {"unsupported": False, "processed": 0}
 
     #print(f'Command: {le.command}, Component: {le.component}, Actual Query: {le.actual_query}')
-    if 'COMMAND' == le.component:
-        if le.command in ['find']:
+    if 'COMMAND' == log_event.component:
+        if log_event.command in ['find']:
             #print("Processing COMMAND find...")
-            retval = process_find(le, usage_map, ver)
+            retval = process_find(log_event, usage_map, ver)
             cmd_map["find"] = cmd_map.get("find", 0) + 1
 
-        if le.command in ['aggregate']:
+        if log_event.command in ['aggregate']:
             #print("Processing COMMAND aggregate...")
-            retval = process_aggregate(le, usage_map, ver)
+            retval = process_aggregate(log_event, usage_map, ver)
             cmd_map["aggregate"] = cmd_map.get("aggregate", 0) + 1
 
-    elif 'QUERY' == le.component:
+    elif 'QUERY' == log_event.component:
         #print("Processing query...")
-        retval = process_query(le, usage_map, ver)
+        retval = process_query(log_event, usage_map, ver)
         cmd_map["query"] = cmd_map.get("query", 0) + 1
 
-    elif 'WRITE' == le.component:
-        if le.operation in ['update']:
+    elif 'WRITE' == log_event.component:
+        if log_event.operation in ['update']:
             #print("Processing update...")
-            retval = process_update(le, usage_map, ver)
+            retval = process_update(log_event, usage_map, ver)
             cmd_map["update"] = cmd_map.get("update", 0) + 1
 
  #   if ("actual_query" in retval.keys()):
