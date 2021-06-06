@@ -1,13 +1,14 @@
  #!/usr/bin/python3
 
-import os
+from os.path import isfile, dirname, abspath, join
 import sys
 import yaml
 from mtools.util import logevent
 import csv
 import json
 
-dollar_file = './compat/dollar.csv'
+ROOT_DIR = dirname(abspath(__file__))
+dollar_file = join(ROOT_DIR, 'dollar.csv')
 versions = ['3.6', '4.0']
 
 def all_keys(x):
@@ -47,13 +48,13 @@ def check_keys(query, usage_map, ver):
     return unsupported
 
 def process_aggregate(log_event, usage_map, ver):
-    command = yaml.load(" ".join(le.split_tokens[le.split_tokens.index("command:")+2:le.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
+    command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     p_usage_map = {}
     for p in command["pipeline"]:
         check_keys(p, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.aggregate({command})'.format(namespace=le.namespace, command=command["pipeline"])
+    actual_query = '{namespace}.aggregate({command})'.format(namespace=log_event.namespace, command=command["pipeline"])
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
               "logevent": log_event,
@@ -80,11 +81,11 @@ def process_query(log_event, usage_map, ver):
 
 def process_find(log_event, usage_map, ver):
     p_usage_map = {}
-    query = yaml.load(" ".join(le.split_tokens[le.split_tokens.index("command:")+2:le.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
+    query = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     check_keys(query["filter"], p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.find({query}'.format(namespace=le.namespace, query=query["filter"])
+    actual_query = '{namespace}.find({query}'.format(namespace=log_event.namespace, query=query["filter"])
     if "projection" in query.keys():
         actual_query = '{}, {}'.format(actual_query, query["projection"])
     actual_query = '{})'.format(actual_query)
@@ -193,7 +194,7 @@ def main(args):
         print_usage()
         sys.exit()
     infname = args[1]
-    if not os.path.isfile(infname):
+    if not isfile(infname):
         print('Input file not found ({file})'.format(file=infname))
         print_usage()
         sys.exit()
@@ -203,4 +204,5 @@ def main(args):
     process_log_file(ver, infname, outfname, outqueryfname)
 
 if __name__ == '__main__':
+    print(ROOT_DIR)
     main(sys.argv[1:])
