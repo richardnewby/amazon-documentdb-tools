@@ -46,8 +46,7 @@ def check_keys(query, usage_map, ver):
             unsupported = True
     return unsupported
 
-def process_aggregate(le, usage_map, ver):
-    retval = {}
+def process_aggregate(log_event, usage_map, ver):
     command = yaml.load(" ".join(le.split_tokens[le.split_tokens.index("command:")+2:le.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     p_usage_map = {}
     for p in command["pipeline"]:
@@ -57,31 +56,29 @@ def process_aggregate(le, usage_map, ver):
     actual_query = '{namespace}.aggregate({command})'.format(namespace=le.namespace, command=command["pipeline"])
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
-              "logevent": le,
+              "logevent": log_event,
               "processed": 1,
               "actual_query": actual_query}
     return retval
 
-def process_query(le, usage_map, ver):
-    retval = {}
+def process_query(log_event, usage_map, ver):
     p_usage_map = {}
-    query = yaml.load(le.actual_query, Loader=yaml.FullLoader)
+    query = yaml.load(log_event.actual_query, Loader=yaml.FullLoader)
     check_keys(query, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.find({query}'.format(namespace=le.namespace, query=query["filter"])
+    actual_query = '{namespace}.find({query}'.format(namespace=log_event.namespace, query=query["filter"])
     if "projection" in query.keys():
         actual_query = '{actual_query}, {projection}'.format(actual_query=actual_query, projection=query["projection"])
     actual_query = '{})'.format(actual_query)
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
-              "logevent": le,
+              "logevent": log_event,
               "processed": 1,
               "actual_query": actual_query}
     return retval
 
-def process_find(le, usage_map, ver):
-    retval = {}
+def process_find(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(" ".join(le.split_tokens[le.split_tokens.index("command:")+2:le.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     check_keys(query["filter"], p_usage_map, ver)
@@ -93,20 +90,22 @@ def process_find(le, usage_map, ver):
     actual_query = '{})'.format(actual_query)
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
-              "logevent": le,
+              "logevent": log_event,
               "processed": 1,
               "actual_query": actual_query}
     return retval
 
-def process_update(le, usage_map, ver):
-    retval = {}
+def process_update(log_event, usage_map, ver):
     p_usage_map = {}
-    command = yaml.load(" ".join(le.split_tokens[le.split_tokens.index("command:")+1:le.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
+    command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     check_keys(command, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.updateMany({q}, {u})'.format(namespace=le.namespace, q=command["q"], u=command["u"])
-    retval = {"unsupported": (0 < len(p_usage_map.keys())), "unsupported_keys": list(p_usage_map.keys()), "logevent": le, "processed": 1, "actual_query": actual_query}
+    actual_query = '{namespace}.updateMany({q}, {u})'.format(namespace=log_event.namespace, q=command["q"], u=command["u"])
+    retval = {"unsupported": (0 < len(p_usage_map.keys())),
+              "unsupported_keys": list(p_usage_map.keys()),
+              "logevent": log_event, "processed": 1,
+              "actual_query": actual_query}
     return retval
 
 def process_line(log_event, usage_map, ver, cmd_map):
