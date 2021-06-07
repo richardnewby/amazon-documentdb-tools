@@ -9,7 +9,7 @@ fi
 # Create a python virtual environment
 python3 -m venv venv
 
-# Activate the virtual environment
+# Activate the python virtual environment
 source venv/bin/activate
 
 # Install the compat-tool requirements
@@ -20,3 +20,7 @@ pip3 install -r ./index-tool/requirements.txt
 
 # Deactivate the python virtual environment
 deactivate
+
+# Make the compat-tool and index-tool scripts executable
+chmod +x ./bin/compat-tool
+chmod +x ./bin/index-tool
