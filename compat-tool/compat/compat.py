@@ -6,6 +6,7 @@ import sys
 import yaml
 from mtools.util import logevent
 import csv
+import logging
 
 ROOT_DIR = dirname(abspath(__file__))
 VERSIONS = ['3.6', '4.0']
@@ -49,9 +50,11 @@ def check_keys(query, usage_map, ver):
 
 def process_aggregate(log_event, usage_map, ver):
     command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
+    logging.debug('Processing AGGREGATE: {}'.format(command))
     p_usage_map = {}
     for p in command["pipeline"]:
-        check_keys(p, p_usage_map, ver)
+        if check_keys(p, p_usage_map, ver):
+            logging.debug('Unsupported: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.aggregate({})'.format(log_event.namespace, command["pipeline"])
@@ -65,7 +68,8 @@ def process_aggregate(log_event, usage_map, ver):
 def process_query(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(log_event.actual_query, Loader=yaml.FullLoader)
-    check_keys(query, p_usage_map, ver)
+    if check_keys(query, p_usage_map, ver):
+        logging.debug('Unsupported: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.find({})'.format(log_event.namespace, query)
@@ -79,7 +83,9 @@ def process_query(log_event, usage_map, ver):
 def process_find(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    check_keys(query["filter"], p_usage_map, ver)
+    logging.debug('Processing FIND: {}'.format(query))
+    if check_keys(query["filter"], p_usage_map, ver):
+        logging.debug('Unsupported: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.find({}'.format(log_event.namespace, query["filter"])
@@ -96,7 +102,9 @@ def process_find(log_event, usage_map, ver):
 def process_update(log_event, usage_map, ver):
     p_usage_map = {}
     cmd = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    check_keys(cmd, p_usage_map, ver)
+    logging.debug('Processing UPDATE: {}'.format(cmd))
+    if check_keys(cmd, p_usage_map, ver):
+        logging.debug('Unsupported: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.updateMany({}, {})'.format(log_event.namespace, cmd["q"], cmd["u"])
@@ -112,17 +120,14 @@ def process_line(log_event, usage_map, ver, cmd_map):
     #print(f'Command: {le.command}, Component: {le.component}, Actual Query: {le.actual_query}')
     if 'COMMAND' == log_event.component:
         if log_event.command in ['find']:
-            #print("Processing COMMAND find...")
             retval = process_find(log_event, usage_map, ver)
             cmd_map["find"] = cmd_map.get("find", 0) + 1
 
         if log_event.command in ['aggregate']:
-            #print("Processing COMMAND aggregate...")
             retval = process_aggregate(log_event, usage_map, ver)
             cmd_map["aggregate"] = cmd_map.get("aggregate", 0) + 1
 
     elif 'QUERY' == log_event.component:
-        #print("Processing query...")
         retval = process_query(log_event, usage_map, ver)
         cmd_map["query"] = cmd_map.get("query", 0) + 1
 
@@ -146,9 +151,9 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
     unsupported_ct = 0
     with open(fname) as log_file:
         for line in log_file:
- #          print('\n{}'.format(line))
             log_event = logevent.LogEvent(line)
             if log_event.datetime is None:
+              logging.debug("Unable to process line: {}".format(line))
               continue
             pl = process_line(log_event, usage_map, ver, cmd_map)
             line_ct += pl["processed"]
@@ -208,8 +213,19 @@ def main():
 
     args = parser.parse_args()
 
+    log_level = logging.INFO
+
     if args.debug is True:
-        DEBUG = True
+        log_level = logging.DEBUG
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    root_handler = logging.StreamHandler(sys.stdout)
+    root_handler.setLevel(log_level)
+    formatter = logging.Formatter('%(asctime)s: %(message)s')
+    root_handler.setFormatter(formatter)
+    root_logger.addHandler(root_handler)
 
     if args.version not in VERSIONS:
         message = 'Version {} not supported'.format(args.version)
