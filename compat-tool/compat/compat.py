@@ -40,7 +40,7 @@ def load_keywords(fname):
                 keywords[k][row['Command']] = row[k]
     return keywords
 
-def check_keys(query, usage_map, ver):
+def has_unsupported(query, usage_map, ver):
     unsupported = False
     for k in dollar_keys(query):
         if 'No' == keywords[ver][k]:
@@ -50,11 +50,10 @@ def check_keys(query, usage_map, ver):
 
 def process_aggregate(log_event, usage_map, ver):
     command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    logging.debug('Processing AGGREGATE: {}'.format(command))
     p_usage_map = {}
     for p in command["pipeline"]:
-        if check_keys(p, p_usage_map, ver):
-            logging.debug('Unsupported: {}'.format(p_usage_map))
+        if has_unsupported(p, p_usage_map, ver):
+            logging.debug('Found unsupported AGGREGATE: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.aggregate({})'.format(log_event.namespace, command["pipeline"])
@@ -68,8 +67,8 @@ def process_aggregate(log_event, usage_map, ver):
 def process_query(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(log_event.actual_query, Loader=yaml.FullLoader)
-    if check_keys(query, p_usage_map, ver):
-        logging.debug('Unsupported: {}'.format(p_usage_map))
+    if has_unsupported(query, p_usage_map, ver):
+        logging.debug('Found unsupported QUERY: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.find({})'.format(log_event.namespace, query)
@@ -83,9 +82,8 @@ def process_query(log_event, usage_map, ver):
 def process_find(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    logging.debug('Processing FIND: {}'.format(query))
-    if check_keys(query["filter"], p_usage_map, ver):
-        logging.debug('Unsupported: {}'.format(p_usage_map))
+    if has_unsupported(query["filter"], p_usage_map, ver):
+        logging.debug('Found unsupported FIND: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.find({}'.format(log_event.namespace, query["filter"])
@@ -102,9 +100,8 @@ def process_find(log_event, usage_map, ver):
 def process_update(log_event, usage_map, ver):
     p_usage_map = {}
     cmd = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    logging.debug('Processing UPDATE: {}'.format(cmd))
-    if check_keys(cmd, p_usage_map, ver):
-        logging.debug('Unsupported: {}'.format(p_usage_map))
+    if has_unsupported(cmd, p_usage_map, ver):
+        logging.debug('Found unsupported UPDATE: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
     actual_query = '{}.updateMany({}, {})'.format(log_event.namespace, cmd["q"], cmd["u"])
