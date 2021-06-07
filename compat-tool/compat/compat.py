@@ -176,6 +176,16 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
     print('Log lines of unsupported operators logged here: {}'.format(unsupported_fname))
     print('Queries of unsupported operators logged here: {}'.format(unsupported_query_fname))
 
+def init_logger(debug):
+    log_level = logging.DEBUG if debug else logging.INFO
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_handler = logging.StreamHandler(sys.stdout)
+    root_handler.setLevel(log_level)
+    formatter = logging.Formatter('%(asctime)s: %(message)s')
+    root_handler.setFormatter(formatter)
+    root_logger.addHandler(root_handler)
+
 def main():
     """
        parse command line arguments
@@ -210,19 +220,8 @@ def main():
 
     args = parser.parse_args()
 
-    log_level = logging.INFO
-
-    if args.debug is True:
-        log_level = logging.DEBUG
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(log_level)
-
-    root_handler = logging.StreamHandler(sys.stdout)
-    root_handler.setLevel(log_level)
-    formatter = logging.Formatter('%(asctime)s: %(message)s')
-    root_handler.setFormatter(formatter)
-    root_logger.addHandler(root_handler)
+    # Initialize the logger
+    init_logger(args.debug)
 
     if args.version not in VERSIONS:
         message = 'Version {} not supported'.format(args.version)
