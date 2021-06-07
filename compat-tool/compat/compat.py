@@ -1,15 +1,15 @@
  #!/usr/bin/python3
 
 from os.path import isfile, dirname, abspath, join
+import argparse
 import sys
 import yaml
 from mtools.util import logevent
 import csv
-import json
 
 ROOT_DIR = dirname(abspath(__file__))
-dollar_file = join(ROOT_DIR, 'dollar.csv')
-versions = ['3.6', '4.0']
+VERSIONS = ['3.6', '4.0']
+DEBUG = False
 
 def all_keys(x):
     k = []
@@ -174,31 +174,61 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
     print('Log lines of unsupported operators logged here: {}'.format(unsupported_fname))
     print('Queries of unsupported operators logged here: {}'.format(unsupported_query_fname))
 
-def print_usage():
-    print("Usage: compat.py <version> <input_file> <output_file>")
-    print("  version : " + ", ".join(versions))
-    print("  input_file: location of MongoDB log file")
-    print("  output_file: location to write log lines that corrpond to unsupported operators")
+def main():
+    """
+       parse command line arguments
+    """
+    parser = argparse.ArgumentParser(
+        description="""Examines log files from MongoDB to determine if there are any queries which use operators that
+                        are not supported in Amazon DocumentDB.""")
 
-def main(args):
-    if 3 != len(args):
-        print('Incorrect number of arguments')
-        print_usage()
-        sys.exit()
-    ver = args[0]
-    if ver not in versions:
-        print('Version {} not supported'.format(ver))
-        print_usage()
-        sys.exit()
-    infname = args[1]
-    if not isfile(infname):
-        print('Input file not found ({})'.format(infname))
-        print_usage()
-        sys.exit()
-    outfname = args[2]
-    outqueryfname = '{}.query'.format(outfname)
-    load_keywords(dollar_file)
-    process_log_file(ver, infname, outfname, outqueryfname)
+    parser.add_argument('--debug',
+                        required=False,
+                        action='store_true',
+                        dest='debug',
+                        help='output debugging information')
+
+    parser.add_argument('--version', '-v',
+                        required=True,
+                        type=str,
+                        dest='version',
+                        help='version of Amazon DocumentDB with which you are evaluating compatibility.')
+
+    parser.add_argument('--input-file', '-i',
+                        required=True,
+                        type=str,
+                        dest='input_fname',
+                        help='location of the MongoDB log file  to examine')
+
+    parser.add_argument('--output-file', '-o',
+                        required=True,
+                        type=str,
+                        dest='output_fname',
+                        help='location of the output compatibility report.')
+
+    args = parser.parse_args()
+
+    if args.debug is True:
+        DEBUG = True
+
+    if args.version not in VERSIONS:
+        message = 'Version {} not supported'.format(args.version)
+        parser.error(message)
+
+    # Get absolute file paths
+    input_path = abspath(args.input_fname)
+    output_path = abspath(args.output_fname)
+    output_query_path = '{}.query'.format(output_path)
+
+    if not isfile(input_path):
+        message = 'Input file not found ({})'.format(input_path)
+        parser.error(message)
+
+    # Load the keyword csv file
+    load_keywords(join(ROOT_DIR, 'dollar.csv'))
+
+    # Process the log file
+    process_log_file(args.version, input_path, output_path, output_query_path)
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main()
