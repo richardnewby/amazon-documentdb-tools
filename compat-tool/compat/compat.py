@@ -40,7 +40,7 @@ def load_keywords(fname):
                 keywords[k][row['Command']] = row[k]
     return keywords
 
-def has_unsupported(query, usage_map, ver):
+def has_unsupported_operators(query, usage_map, ver):
     unsupported = False
     for k in dollar_keys(query):
         if 'No' == keywords[ver][k]:
@@ -52,7 +52,7 @@ def process_aggregate(log_event, usage_map, ver):
     command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
     p_usage_map = {}
     for p in command["pipeline"]:
-        if has_unsupported(p, p_usage_map, ver):
+        if has_unsupported_operators(p, p_usage_map, ver):
             logging.debug('Found unsupported AGGREGATE: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
@@ -67,7 +67,7 @@ def process_aggregate(log_event, usage_map, ver):
 def process_query(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(log_event.actual_query, Loader=yaml.FullLoader)
-    if has_unsupported(query, p_usage_map, ver):
+    if has_unsupported_operators(query, p_usage_map, ver):
         logging.debug('Found unsupported QUERY: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
@@ -82,7 +82,7 @@ def process_query(log_event, usage_map, ver):
 def process_find(log_event, usage_map, ver):
     p_usage_map = {}
     query = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:")+2:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    if has_unsupported(query["filter"], p_usage_map, ver):
+    if has_unsupported_operators(query["filter"], p_usage_map, ver):
         logging.debug('Found unsupported FIND: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
@@ -100,7 +100,7 @@ def process_find(log_event, usage_map, ver):
 def process_update(log_event, usage_map, ver):
     p_usage_map = {}
     cmd = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    if has_unsupported(cmd, p_usage_map, ver):
+    if has_unsupported_operators(cmd, p_usage_map, ver):
         logging.debug('Found unsupported UPDATE: {}'.format(p_usage_map))
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
