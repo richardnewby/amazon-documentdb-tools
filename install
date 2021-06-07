@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Save the current working directory.
+INITIAL_WORKING_DIRECTORY=$(pwd)
+
+# Change the working directory to the bin directory.
+cd "$(dirname "$0")"
+
 # Install python3-venv if it's not already installed
 if [ $(dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -c "ok installed") -eq 0 ];
 then
@@ -24,3 +30,6 @@ deactivate
 # Make the compat-tool and index-tool scripts executable
 chmod +x ./bin/compat-tool
 chmod +x ./bin/index-tool
+
+# Go back to where we were before changing into the bin directory.
+cd $INITIAL_WORKING_DIRECTORY
