@@ -54,7 +54,7 @@ def process_aggregate(log_event, usage_map, ver):
         check_keys(p, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.aggregate({command})'.format(namespace=log_event.namespace, command=command["pipeline"])
+    actual_query = '{}.aggregate({})'.format(log_event.namespace, command["pipeline"])
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
               "logevent": log_event,
@@ -68,10 +68,7 @@ def process_query(log_event, usage_map, ver):
     check_keys(query, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.find({query}'.format(namespace=log_event.namespace, query=query["filter"])
-    if "projection" in query.keys():
-        actual_query = '{actual_query}, {projection}'.format(actual_query=actual_query, projection=query["projection"])
-    actual_query = '{})'.format(actual_query)
+    actual_query = '{}.find({})'.format(log_event.namespace, query)
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
               "logevent": log_event,
@@ -85,7 +82,7 @@ def process_find(log_event, usage_map, ver):
     check_keys(query["filter"], p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.find({query}'.format(namespace=log_event.namespace, query=query["filter"])
+    actual_query = '{}.find({}'.format(log_event.namespace, query["filter"])
     if "projection" in query.keys():
         actual_query = '{}, {}'.format(actual_query, query["projection"])
     actual_query = '{})'.format(actual_query)
@@ -98,11 +95,11 @@ def process_find(log_event, usage_map, ver):
 
 def process_update(log_event, usage_map, ver):
     p_usage_map = {}
-    command = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
-    check_keys(command, p_usage_map, ver)
+    cmd = yaml.load(" ".join(log_event.split_tokens[log_event.split_tokens.index("command:") + 1:log_event.split_tokens.index("planSummary:")]), Loader=yaml.FullLoader)
+    check_keys(cmd, p_usage_map, ver)
     for k in p_usage_map.keys():
         usage_map[k] = usage_map.get(k, 0) + 1
-    actual_query = '{namespace}.updateMany({q}, {u})'.format(namespace=log_event.namespace, q=command["q"], u=command["u"])
+    actual_query = '{}.updateMany({}, {})'.format(log_event.namespace, cmd["q"], cmd["u"])
     retval = {"unsupported": (0 < len(p_usage_map.keys())),
               "unsupported_keys": list(p_usage_map.keys()),
               "logevent": log_event, "processed": 1,
@@ -158,30 +155,30 @@ def process_log_file(ver, fname, unsupported_fname, unsupported_query_fname):
             if pl["unsupported"]:
                 unsupported_file.write(pl["logevent"].line_str)
                 unsupported_file.write("\n")
-                unsupported_query_file.write('{actual}  // {unsupported}\n'.format(actual=pl["actual_query"], unsupported=pl["unsupported_keys"]))
+                unsupported_query_file.write('{}  // {}\n'.format(pl["actual_query"], pl["unsupported_keys"]))
                 unsupported_ct += 1
     unsupported_file.close()
 
     print('Results:')
     if unsupported_ct > 0:
-        print('\t {unsupported_ct} out of {line_ct} queries unsupported'.format(unsupported_ct=unsupported_ct, line_ct=line_ct))
+        print('\t {} out of {} queries unsupported'.format(unsupported_ct, line_ct))
         print('Unsupported operators (and number of queries used):')
         for k,v in sorted(usage_map.items(), key=lambda x: (-x[1],x[0])):
-            print('\t{key:20}  {val}'.format(key=k, val=v))
+            print('\t{:20}  {}'.format(k, v))
     else:
         print('\t All queries are supported')
 
     print('Query Types:')
     for k,v in sorted(cmd_map.items(), key=lambda x: (-x[1],x[0])):
-        print('\t{key:20}  {val}'.format(key=k, val=v))
-    print('Log lines of unsupported operators logged here: {file}'.format(file=unsupported_fname))
-    print('Queries of unsupported operators logged here: {file}'.format(file=unsupported_query_fname))
+        print('\t{:20}  {}'.format(k, v))
+    print('Log lines of unsupported operators logged here: {}'.format(unsupported_fname))
+    print('Queries of unsupported operators logged here: {}'.format(unsupported_query_fname))
 
 def print_usage():
     print("Usage: compat.py <version> <input_file> <output_file>")
     print("  version : " + ", ".join(versions))
     print("  input_file: location of MongoDB log file")
-    print("  output_file: location to write log lines that correspond to unsupported operators")
+    print("  output_file: location to write log lines that corrpond to unsupported operators")
 
 def main(args):
     if 3 != len(args):
@@ -190,19 +187,18 @@ def main(args):
         sys.exit()
     ver = args[0]
     if ver not in versions:
-        print('Version {ver} not supported'.format(ver=ver))
+        print('Version {} not supported'.format(ver))
         print_usage()
         sys.exit()
     infname = args[1]
     if not isfile(infname):
-        print('Input file not found ({file})'.format(file=infname))
+        print('Input file not found ({})'.format(infname))
         print_usage()
         sys.exit()
     outfname = args[2]
-    outqueryfname = '{file}.query'.format(file=outfname)
+    outqueryfname = '{}.query'.format(outfname)
     load_keywords(dollar_file)
     process_log_file(ver, infname, outfname, outqueryfname)
 
 if __name__ == '__main__':
-    print(ROOT_DIR)
     main(sys.argv[1:])
