@@ -6,11 +6,14 @@ INITIAL_WORKING_DIRECTORY=$(pwd)
 # Change the working directory to the bin directory.
 cd "$(dirname "$0")"
 
+# Move to the root directory
+cd ..
+
 # Activate the python virtual environment
-source ../venv/bin/activate
+source ./venv/bin/activate
 
 # Run the compatibility tool
-python3 ../compat-tool/compat/compat.py "$@"
+python3 ./compat-tool/compat/compat.py "$@"
 
 # Deactivate the python virtual environment
 deactivate
