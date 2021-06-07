@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Install python3-venv if it's not already installed
+if [ $(dpkg-query -W -f='${Status}' python3-venv 2>/dev/null | grep -c "ok installed") -eq 0 ];
+then
+  sudo apt-get install python3-venv -y;
+fi
+
+# Create a python virtual environment
+python3 -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Install the compat-tool requirements
+pip3 install -r ./compat-tool/requirements.txt
+
+# Install the index-tool requirements
+pip3 install -r ./index-tool/requirements.txt
+
+# Deactivate the python virtual environment
+deactivate
